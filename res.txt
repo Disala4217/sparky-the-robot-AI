@@ -1,0 +1,105 @@
+#include <SPI.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+
+int msg[7];  
+RF24 radio(9, 10);
+const uint64_t pipe = 0xE8E8F0F0E1LL;
+int M[12] = {4, 5, 6, 7, 3, 2, A0, A1, A2, A3, A4, A5};
+
+void setup(void)
+{
+  Serial.begin(9600); // Initialize serial communication
+  radio.begin();
+  radio.openReadingPipe(1, pipe);
+  radio.startListening();
+
+  for (int i = 0; i < 12; i++) {
+    pinMode(M[i], (i < 6) ? OUTPUT : OUTPUT); // Set pin mode
+  }
+}
+
+void loop(void)
+{
+  if (radio.available()) {
+    bool done = false;    
+    while (!done) {
+      done = radio.read(msg, sizeof(msg)); 
+      Serial.println(msg[0]);
+      
+      if (msg[0] == 111) {
+        delay(2); // Small delay
+
+        // Reset all digital pins to LOW and analog pins to 0
+        for (int i = 0; i < 6; i++) {
+          digitalWrite(M[i], LOW);
+        }
+        for (int i = 6; i < 12; i++) {
+          analogWrite(M[i], 0);
+        }
+
+        // Handle joystick 1 x-axis
+        if (msg[1] > 230) {
+          digitalWrite(M[0], HIGH);
+          digitalWrite(M[1], LOW);
+        } else if (msg[1] < 30) {
+          digitalWrite(M[0], LOW);
+          digitalWrite(M[1], HIGH);
+        }
+
+        // Handle joystick 1 y-axis
+        if (msg[2] > 230) {
+          digitalWrite(M[2], HIGH);
+          digitalWrite(M[3], LOW);
+        } else if (msg[2] < 30) {
+          digitalWrite(M[2], LOW);
+          digitalWrite(M[3], HIGH);
+        }
+
+        // Handle joystick 2 x-axis
+        if (msg[3] > 250) {
+          digitalWrite(M[4], HIGH);
+          digitalWrite(M[5], LOW);
+        } else if (msg[3] < 10) {
+          digitalWrite(M[4], LOW);
+          digitalWrite(M[5], HIGH);
+        }
+
+        // Handle joystick 2 y-axis
+        if (msg[4] > 230) {
+          analogWrite(M[6], 255);
+          analogWrite(M[7], 0);
+        } else if (msg[4] < 30) {
+          analogWrite(M[6], 0);
+          analogWrite(M[7], 255);
+        }
+
+        // Handle joystick 3 x-axis
+        if (msg[5] > 230) {
+          analogWrite(M[8], 255);
+          analogWrite(M[9], 0);
+          analogWrite(M[10], 0);
+          analogWrite(M[11], 255);
+        } else if (msg[5] < 30) {
+          analogWrite(M[8], 0);
+          analogWrite(M[9], 255);
+          analogWrite(M[10], 255);
+          analogWrite(M[11], 0);
+        }
+
+        // Handle joystick 3 y-axis
+        if (msg[6] > 230) {
+          analogWrite(M[8], 255);
+          analogWrite(M[9], 0);
+          analogWrite(M[10], 255);
+          analogWrite(M[11], 0);
+        } else if (msg[6] < 30) {
+          analogWrite(M[8], 0);
+          analogWrite(M[9], 255);
+          analogWrite(M[10], 0);
+          analogWrite(M[11], 255);
+        }
+      }
+    }
+  }
+}
